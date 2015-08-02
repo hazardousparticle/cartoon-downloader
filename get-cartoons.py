@@ -4,6 +4,8 @@
 
 import httplib, urllib, urllib2
 
+#=============================================================
+#cusomizable parameters
 #details of the HTTP request to find episodes.
 host = "www.animeuploads.com"
 baseUrl = "http://www.animeuploads.com/embed_jw51.php?file=Death%20Note/[RaX]-DthNte-"
@@ -22,21 +24,27 @@ firstEp = 1
 #stop extracting episodes at episode number (add 1, casue the loop stop at N - 1)
 lastEp =  10
 
+#block sise of file downloader default: 8192
+block_sz = 8192
 
 #loop through all episodes from first to last
 for i in range(firstEp,lastEp):
     try:
-        print "death note ep " + str(i) + ":"
-        requestUrl = baseUrl + str(i) + ext
+        epCode = "{0:02d}".format(i)
+        print "death note ep " + epCode + ":"
+        requestUrl = baseUrl + epCode + ext
         headers = {"User-Agent": userAgent, "Referer": requestUrl, "Content-Type": "application/"+ \
-        "x-www-form-urlencoded", "Content-Length": "48"}
+        "x-www-form-urlencoded", "Content-Length": str(len(requestBody))}
         
+        #find stream in webpage with flash embedded
+        #1. request a the URL to simulate clicking "click to watch free"
+        #   post request
         conn = httplib.HTTPConnection(host)
         conn.request("POST", requestUrl, requestBody, headers)
         response = conn.getresponse()
 
         data = response.read()
-        #print data
+        #2. receive a html file with the flash plugin in the embded tag
         
         conn.close()
         
@@ -48,7 +56,7 @@ for i in range(firstEp,lastEp):
         #add length of startSearch to start position.
         #URL starts after the instance of this string
         
-        endSearch1 = endSearch + str(i) + ext
+        endSearch1 = endSearch + epCode + ext
         #string to match to find end of URL in received data
         
         end = data.find(endSearch1)
@@ -63,6 +71,8 @@ for i in range(firstEp,lastEp):
         url = data.replace(" ", "%20")
         print "DL URL: " + url
         
+        del data
+        
         #get file to download
         file_name = url.split('/')[-1]
         u = urllib2.urlopen(url)
@@ -73,7 +83,6 @@ for i in range(firstEp,lastEp):
 
         #DL the file in blocks and update the progress
         file_size_dl = 0
-        block_sz = 8192
         while True:
             buffer = u.read(block_sz)
             if not buffer:
@@ -89,7 +98,7 @@ for i in range(firstEp,lastEp):
         print ""
     except Exception as detail:
         pass
-        print "file " + str(i) + " failed"
+        print "file " + epCode + " failed"
         print detail 
         print ""
 
