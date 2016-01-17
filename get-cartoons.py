@@ -1,19 +1,20 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 
 #script to search watch cartoon online and download all episodes from a show.
 
-import httplib, urllib, urllib2
+import urllib.request, urllib.parse
+import sys
 
 #=============================================================
 #cusomizable parameters
 #details of the HTTP request to find episodes.
-host = "www.animeuploads.com"
 baseUrl = "http://www.animeuploads.com/embed_jw51.php?file=Death%20Note/[RaX]-DthNte-"
 ext = ".flv" #file extension of video
+#this comes from what the web browser would request when streaming
 requestBody = "fuck_you=&confirm=Click+Here+to+Watch+Free%21%21"
 
 userAgent = "Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:39.0)" + \
-        "Gecko/20100101 Firefox/39.0"
+"Gecko/20100101 Firefox/39.0"
 
 #string to match, indicating the stream URL form the HTTP response
 startSearch = "back.jpg&#038;file="
@@ -21,8 +22,8 @@ endSearch = "DthNte-" # + episode number + .flv
 
 #start harvesting the episodes from:
 firstEp = 1
-#stop extracting episodes at episode number (add 1, casue the loop stop at N - 1)
-lastEp =  10
+#stop extracting episodes at episode number (add 1, cause the loop stops at N - 1)
+lastEp =  30
 
 #block sise of file downloader default: 8192
 block_sz = 8192
@@ -31,23 +32,24 @@ block_sz = 8192
 for i in range(firstEp,lastEp):
     try:
         epCode = "{0:02d}".format(i)
-        print "death note ep " + epCode + ":"
+        print("episode " + epCode + ":")
         requestUrl = baseUrl + epCode + ext
-        headers = {"User-Agent": userAgent, "Referer": requestUrl, "Content-Type": "application/"+ \
+        browser_headers = {"User-Agent": userAgent, "Referer": requestUrl, "Content-Type": "application/"+ \
         "x-www-form-urlencoded", "Content-Length": str(len(requestBody))}
         
         #find stream in webpage with flash embedded
         #1. request a the URL to simulate clicking "click to watch free"
         #   post request
-        conn = httplib.HTTPConnection(host)
-        conn.request("POST", requestUrl, requestBody, headers)
-        response = conn.getresponse()
+        
+        req = urllib.request.Request(requestUrl, data = requestBody.encode(), headers=browser_headers, method="POST")
+        response = urllib.request.urlopen(req)
 
-        data = response.read()
+        #read the stream for the network and convert to string
+        data = response.read().decode("utf-8")
         #2. receive a html file with the flash plugin in the embded tag
         
-        conn.close()
-        
+        response.close()
+   
         start = data.find(startSearch)
         #start position (in characters)
         #video URL starts at this offset
@@ -63,23 +65,22 @@ for i in range(firstEp,lastEp):
         end += len(endSearch1)
         data = data[start:end]
         
-        print "Found: " + data
-        
         #url decode
-        data = urllib.unquote(data).decode('utf8')
-        
+        data = urllib.parse.unquote(data)
+        #cant have spaces in urls, so only encode those.
         url = data.replace(" ", "%20")
-        print "DL URL: " + url
+        print("Download URL: " + url)
         
         del data
         
         #get file to download
         file_name = url.split('/')[-1]
-        u = urllib2.urlopen(url)
+        u = urllib.request.urlopen(url)
         f = open(file_name, 'wb')
-        meta = u.info()
-        file_size = int(meta.getheaders("Content-Length")[0])
-        print "Downloading: %s Bytes: %s" % (file_name, file_size)
+        #request metadata
+        meta = u.headers.get("Content-Length")
+        file_size = int(meta)
+        print("Downloading: %s, Bytes: %s" % (file_name, file_size))
 
         #DL the file in blocks and update the progress
         file_size_dl = 0
@@ -90,20 +91,32 @@ for i in range(firstEp,lastEp):
 
             file_size_dl += len(buffer)
             f.write(buffer)
-            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
-            status = status + chr(8)*(len(status)+1)
-            print status,
+            
+            
+            
+            file_size_mb=(file_size_dl / (1024*1024))
+            dl_progress=(file_size_dl * 100. / file_size)
+            #printf("format", file_size_mb, dl_progress)
+            status = "\r{a:4.2f} MiB [{b:3.2f}%]".format(a=file_size_mb, b=dl_progress)
+            sys.stdout.write(status)
 
-        f.close()    
-        print ""
+        u.close()
+        f.close()
+        print("")
+        print("Downloaded: " + file_name)
+    #quit gracefully on ctrl c
+    except KeyboardInterrupt:
+        print("Aborted")
+        exit(0);
+    #errors in each file to download, skip and move to next
     except Exception as detail:
         pass
-        print "file " + epCode + " failed"
-        print detail 
-        print ""
+        print("file " + epCode + " failed")
+        print(detail)
+        print("")
 
 #del requestUrl
 #del headers
 
-print "done!"
+print("done!")
 
