@@ -10,7 +10,6 @@ class HTTPDownloader:
         if len(url) == 0:
             return
         
-        
         #block sise of file downloader default: 8192
         block_sz = 8192
     

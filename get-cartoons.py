@@ -42,9 +42,7 @@ processes=[]
 #loop through all episodes from first to last
 #for episode in range(firstEp,lastEp):
 def findUrl(episode):
- 
-    print("episode " + "{0:02d}".format(episode) + ":")
-    
+   
     requestUrl = baseUrl.replace("{}", str(episode))
     
     browser_headers = {"User-Agent": userAgent, "Referer": requestUrl}
@@ -71,9 +69,7 @@ def findUrl(episode):
     requestUrl = data[start:end] 
     
     response.close()
-    
-       
-    
+          
     
     #find stream in webpage with flash embedded
     #1. request a the URL to simulate clicking "click to watch free"
@@ -107,13 +103,9 @@ def findUrl(episode):
     data = urllib.parse.unquote(data)
     #cant have spaces in urls, so only encode those.
     url = data.replace(" ", "%20")
-    print("Download URL: " + url)
     
-    del data
+    print("episode " + "{0:02d}".format(episode) + ":" + url.split('/')[-1])
     
-    #http download stuff
-    #p = Process(target = HTTPDownloader.download_file, args=(url,) )
-    #processes.append(p)
     return url
                 
 threads_count = int((lastEp - firstEp ) / max_threads) + 1
@@ -121,7 +113,7 @@ threads_count = int((lastEp - firstEp ) / max_threads) + 1
 if threads_count <= 0:
     threads_count = (lastEp - firstEp)
 
-print("Episodes: " + str(lastEp - firstEp))
+print("Episodes: " + str(lastEp - firstEp + 1))
 print("Blocks: " + str(threads_count + 1) )
 print(" of " + str(max_threads) + " to download")
 
